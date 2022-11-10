@@ -1,0 +1,66 @@
+version: '3'
+
+services:
+
+  guacd:
+    image: guacamole/guacd
+    restart: always
+    container_name: guacamole-guacd
+    networks:
+      - backend
+
+  db:
+    image: mysql
+    restart: always
+    container_name: guacamole-db
+    environment:
+        MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+        MYSQL_USER: ${MYSQL_USER}
+        MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+        MYSQL_DATABASE: ${MYSQL_DATABASE}
+    volumes:
+      - ./mysql:/var/lib/mysql
+      - ./mysql_init/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    networks:
+      - backend
+
+  guacamole:
+    image: guacamole/guacamole
+    container_name: guacamole-app
+    restart: always
+    ports:
+      - 8080:8080
+    links:
+      - guacd:guacd
+      - db:mysql
+    depends_on:
+      - db
+      - guacd
+    volumes:
+      - "./guac_conf/server.xml:/usr/local/tomcat/conf/server.xml"
+      - "./guac_home:/guac_home"
+    environment:
+      GUACAMOLE_HOME: ${GUACAMOLE_HOME}
+      MYSQL_HOSTNAME: ${MYSQL_HOSTNAME}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      GUACD_HOSTNAME: ${GUACD_HOSTNAME}
+      GUACD_PORT: ${GUACD_PORT}
+      LDAP_HOSTNAME: ${LDAP_HOSTNAME}
+      LDAP_PORT: ${LDAP_PORT}
+      LDAP_ENCRYPTION_METHOD: ${LDAP_ENCRYPTION_METHOD}
+      LDAP_USER_BASE_DN: ${LDAP_USER_BASE_DN}
+      LDAP_GROUP_BASE_DN: ${LDAP_GROUP_BASE_DN}
+      LDAP_SEARCH_BIND_DN: ${LDAP_SEARCH_BIND_DN}
+      LDAP_SEARCH_BIND_PASSWORD: ${LDAP_SEARCH_BIND_PASSWORD}
+      LDAP_USERNAME_ATTRIBUTE: ${LDAP_USERNAME_ATTRIBUTE}
+      LDAP_GROUP_NAME_ATTRIBUTE: ${LDAP_GROUP_NAME_ATTRIBUTE}
+      LDAP_MEMBER_ATTRIBUTE: ${LDAP_MEMBER_ATTRIBUTE}
+      TOTP_ISSUER: ${FQDN_HOST_NAME}
+    networks:
+      - backend
+
+networks:
+#  proxy_net:
+  backend:
